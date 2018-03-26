@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <style>
+        * {
+            padding: 0;
+            margin: 0;
+        }
+
+        #game {
+            width: 1366px;
+            height: 645px;
+            overflow: hidden;
+            background: url("img/bg.jpg") no-repeat 10%;
+            background-size: 100%;
+            position: relative;
+        }
+
+        .imgStyle {
+            width: 100%;
+            position: absolute;
+            top: -420px;
+        }
+
+        #imgBox {
+            width: 230px;
+            height: 300px;
+            position: absolute;
+            top: 10px;
+            left: 60px;
+        }
+
+        #imgBox img {
+            vertical-align: middle;
+        }
+
+        #goo {
+            width: 200px;
+            height: 60px;
+            position: absolute;
+            top: 400px;
+            left: 250px;
+            cursor: pointer;
+        }
+
+        #goo img {
+            position: absolute;
+            width: 200px;
+            height: 60px;
+        }
+
+        #goo img:nth-of-type(2) {
+            opacity: 0;
+        }
+
+        #goo:hover img:nth-of-type(2) {
+            opacity: 1;
+        }
+
+        .fanhui1 {
+            position: absolute;
+            top: 0;
+            z-index: 999;
+            display: none;
+        }
+
+        .fanhui2 {
+            position: absolute;
+            z-index: 999;
+            display: none;
+            top: 100px;
+        }
+
+        #maxBox {
+            position: absolute;
+            right: 0;
+            display: none;
+        }
+
+        #midBox {
+            position: absolute;
+            right: 50px;
+            top: 25px;
+        }
+        #woDiv{
+            width: 300px;
+            height: 100px;
+            position: absolute;
+            left:600px;
+            top: 10px;
+        }
+        #woDiv>div{
+            width:60px;
+            height: 100px;
+            float: left;
+        }
+    </style>
+</head>
+<body>
+<div class="fanhui1">
+    <img src="img/fanhui1.gif" alt="">
+</div>
+<div class="fanhui2">
+    <img src="img/nengliangpingk.png" alt="">
+    <br/>
+    <img src="img/nengliang.gif" alt="">
+</div>
+<div id="game">
+    <img src="img/yemian.jpg" alt="" class="imgStyle">
+    <div id="imgBox">
+        <img src="img/Help.png" alt="">
+        <img src="img/Help1.png" alt="">
+        <span>长按空格键进行攻击</span>
+        <img src="img/Help2.png" alt="">
+        <span>按enter键放大招</span>
+        <p>开局送三个，且用切 <span style="color: red">珍惜</span></p>
+        <img src="img/nengliang.gif" alt="">
+        <span>一个格子为一个大招</span>
+        <br/>
+        <img src="img/nengliangping.gif" alt="">
+        <span>此乃 <span style="color: red">经验瓶</span>经验满了后，宝贝龙回进化，终极状态会有龙卷风等你探索</span>
+        <p style="margin:30px 0 0 80px;font-weight:bold;;">游戏时间为 <span style="color: red">90</span>秒哦!</p>
+    </div>
+    <div id="goo" onclick="openStart()">
+        <img src="img/startOver.gif" alt="">
+        <img src="img/start.gif" alt="">
+    </div>
+    <div id="maxBox">
+        <img src="img/F.gif" alt="">
+        <div id="midBox">1</div>
+    </div>
+    <div id="woDiv">
+        <div id="box1"></div>
+        <div id="box2"></div>
+        <div id="box3"></div>
+        <div id="box4"></div>
+        <div id="box5"></div>
+    </div>
+</div>
+
+<script>
+    //全局变量
+    var imgbox = document.getElementById("imgBox");
+    var divBox = document.getElementById("game");
+    var fanhui1 = document.getElementsByClassName("fanhui1")[0];
+    var fanhui2 = document.getElementsByClassName("fanhui2")[0];
+    var img = divBox.getElementsByTagName("img")[0];
+    var startbox = document.getElementById("goo");
+    var maxBox = document.getElementById("maxBox");
+    var midBox = document.getElementById("midBox");
+    var woDiv=document.getElementById("woDiv");
+    var PalyerPlane;//玩家飞机
+    var enemyArray = [];//敌方小飞机数组
+    var bulletArray = [];//子弹的数组
+    var upBtnStatus = false;//飞机移动的开关
+    var downBtnStatus = false;//飞机移动的开关
+    var leftBtnStatus = false;//飞机移动的开关
+    var rightBtnStatus = false;//飞机移动的开关
+    function openStart() {
+        imgbox.style.display = "none";
+        startbox.style.display = "none";
+        img.style.display = "none";
+        fanhui2.style.display = "block";
+        fanhui1.style.display = "block";
+        maxBox.style.display = "block";
+        PalyerPlane = new PayerPlane("img/WFXFJ.gif", 100, 300, 10, 20);
+        setInterval(createEnemy, 2000);//每隔几秒出现一个敌方小飞机
+        setInterval(ctrlPlaneMove, 50);//当玩家按下键盘是调用开关
+        setInterval(zidan, 40);//子弹
+        setInterval(crashCheck, 100);//碰撞
+        setInterval(endCheck, 100);//自己碰撞
+        setInterval(enemyPlaneMove, 100);//每隔一毫秒调用  飞机移动
+        setInterval(myfen, 20);//计算分数
+        time();
+    }
+
+    /*玩家飞机模板：
+     * 属性：
+     * 1.图片节点img
+     * 2.图片路径
+     * 3.起始坐标X
+     * 4.起始坐标Y
+     * 5.血量
+     * 6.移动速度
+     * 行为：
+     * 1.发子弹
+     * 2.移动*/
+    function PayerPlane(imgsrc, x, y, blood, speed) {
+        this.planeNode = document.createElement("img");
+        this.imgsrc = imgsrc;
+        this.x = x;
+        this.y = y;
+        this.blood = blood;
+        this.speed = speed;
+//子弹
+        /**照片路径
+         * x轴
+         * y轴
+         * 子弹速度
+         * 攻击力**/
+        this.shoot = function () {
+            var bullet = new Bullet("img/zidan.gif", parseInt(this.planeNode.style.left) + 45, parseInt(this.planeNode.style.top) + 15, 30, 5);
+            bulletArray.push(bullet);
+
+        };
+//玩家飞机移动  控制方向
+        this.topMover = function () {
+            if (parseInt(this.planeNode.style.top) < 0) {
+                this.planeNode.style.top = "0px";
+            }
+            this.planeNode.style.top = parseInt(this.planeNode.style.top) - this.speed + "px";
+        };
+        this.bottomMover = function () {
+            if (parseInt(this.planeNode.style.top) >= 645 - 70) {
+                this.planeNode.style.top = "575px";
+            }
+            this.planeNode.style.top = parseInt(this.planeNode.style.top) + this.speed + "px";
+        };
+        this.leftMover = function () {
+            if (parseInt(this.planeNode.style.left) < 0) {
+                this.planeNode.style.left = "10px";
+            }
+            this.planeNode.style.left = parseInt(this.planeNode.style.left) - this.speed + "px";
+        };
+        this.rightMover = function () {
+            if (parseInt(this.planeNode.style.left) >= 1366 - 70) {
+                this.planeNode.style.left = "1296px";
+            }
+            this.planeNode.style.left = parseInt(this.planeNode.style.left) + this.speed + "px";
+        };
+
+//初始化 创建玩家飞机
+        this.init = function () {
+            this.planeNode.src = this.imgsrc;
+            this.planeNode.style.position = "absolute";
+            this.planeNode.style.left = this.x + "px";
+            this.planeNode.style.top = this.y + "px";
+            divBox.appendChild(this.planeNode);
+        };
+        this.init();//就会执行当前的这个方法
+    }
+
+    //监听键盘
+    document.onkeydown = function () {
+        var e = window.event || arguments[0];
+        if (e.keyCode == 38) {
+            upBtnStatus = true;
+        } else if (e.keyCode == 40) {
+            downBtnStatus = true;
+        } else if (e.keyCode == 37) {
+            leftBtnStatus = true;
+        } else if (e.keyCode == 39) {
+            rightBtnStatus = true;
+        }
+//发子弹的
+        else if (e.keyCode == 32) {
+            PalyerPlane.shoot();
+            huan();
+        }
+    };
+
+    //发射子弹时切换图片
+
+    function huan() {
+        PalyerPlane.planeNode.src = "img/fashe.gif"
+    }
+
+    //设置开关关闭
+    document.onkeyup = function () {
+        var e = window.event || arguments[0];
+        if (e.keyCode == 32) {
+            setTimeout(function () {
+                PalyerPlane.planeNode.src = "img/WFXFJ.gif";
+            }, 500);
+        }
+        if (e.keyCode == 38) {
+            upBtnStatus = false;
+        } else if (e.keyCode == 40) {
+            downBtnStatus = false;
+        } else if (e.keyCode == 37) {
+            leftBtnStatus = false;
+        } else if (e.keyCode == 39) {
+            rightBtnStatus = false;
+        }
+    };
+
+    //上下移动的开关
+    function ctrlPlaneMove() {
+        if (upBtnStatus == true) {
+            PalyerPlane.topMover();
+        }
+        if (downBtnStatus == true) {
+            PalyerPlane.bottomMover();
+        }
+        if (leftBtnStatus == true) {
+            PalyerPlane.leftMover();
+        }
+        if (rightBtnStatus == true) {
+            PalyerPlane.rightMover();
+        }
+    }
+
+    /*==========创建敌方小飞机模板========
+    *  敌方小飞机模板：
+     * 属性：
+     * 1.图片节点img
+     * 2.图片路径
+     * 3.起始坐标X
+     * 4.起始坐标Y
+     * 5.血量
+     * 6.移动速度
+     *
+     * 行为：
+     * 1.移动
+     * 2.初始化行为*/
+    function EnemyPlane(imgsrc, x, y, blood, speed, ji, explosionTime, width, height) {
+        this.imgNode = document.createElement("img");
+        this.imgsrc = imgsrc;
+        this.x = x;
+        this.y = y;
+        this.width = width;
+        this.height = height;
+        this.blood = blood;
+        this.speed = speed;
+        this.ji = ji;
+        this.explosionTime = explosionTime;//敌方爆炸时间  让他爆炸时停留一会
+        this.isDead = false;//敌方存活状态
+        this.move = function () {//小飞机移动
+            this.imgNode.style.left = parseInt(this.imgNode.style.left) - this.speed + "px";//小飞机的移动方式
+        };
+        this.init = function () {//初始化
+            this.imgNode.src = this.imgsrc;
+            this.imgNode.style.position = "absolute";
+            this.imgNode.style.left = this.x + "px";
+            this.imgNode.style.top = this.y + "px";
+            divBox.appendChild(this.imgNode);
+        };
+        this.init();
+    }
+
+    //小飞机的生产  和位置
+    /**
+     * 图片路径
+     * x轴
+     * y轴
+     * 血量
+     * 移动速度
+     * **/
+    function createEnemy() {
+        var num = Math.random() * 100;
+        if (num >= 0 && num < 40) {
+            var enemy = new EnemyPlane("img/DFXFJ.gif", 1349, Math.random() * 555, 1, 7, 1, 10, 59, 41)
+        } else if (num >= 40 && num < 80) {
+            enemy = new EnemyPlane("img/DFXN.gif", 1349, Math.random() * 555, 2, 6, 2, 10, 58, 54)
+        } else if (num >= 80 && num < 98) {
+            enemy = new EnemyPlane("img/bianfu.gif", 1349, Math.random() * 555, 3, 4, 3, 15, 107, 92)
+        } else if (num >= 98 && num < 100) {
+            enemy = new EnemyPlane("img/boss.gif", 1349, Math.random() * 555, 4, 2, 5, 30, 183, 163)
+        } else {
+            enemy = new EnemyPlane("img/DFXFJ.gif", 1349, Math.random() * 555, 1, 7, 1, 10, 59, 41)
+        }
+        enemyArray.push(enemy);
+    }
+
+
+    // 删除超出界限的飞机
+    var fen = 0;
+    function enemyPlaneMove() {
+        for (var i = 0; i < enemyArray.length; i++) {
+            if (enemyArray[i].isDead === false) {
+                enemyArray[i].move();
+                if (parseInt(enemyArray[i].imgNode.style.left) < -40) {
+                    divBox.removeChild(enemyArray[i].imgNode);//超出 小飞机的图片节点移除
+                    enemyArray.splice(i, 1);//超出小飞机的数组也要删除
+                }
+            } else {
+                enemyArray[i].explosionTime--;
+                if (enemyArray[i].explosionTime <= 0) {
+                    divBox.removeChild(enemyArray[i].imgNode);
+                    enemyArray.splice(i, 1);
+                    fen += enemyArray[i].ji;
+                }
+            }
+        }
+    }
+
+
+    function myfen() {
+        midBox.innerHTML = fen + "分";
+    }
+
+    // 子弹删除和移动
+    var shi = 10;
+
+    function zidan() {
+        for (var j = 0; j < bulletArray.length; j++) {
+            if (bulletArray[j].isDead1 === false) {
+                bulletArray[j].move();
+                if (parseInt(bulletArray[j].imgNode.style.left) > 1366) {
+                    divBox.removeChild(bulletArray[j].imgNode);//c超出时小飞机的图片节点移除
+                    bulletArray.splice(j, 1);//超出小飞机的数组也要删除
+                }
+            }
+            else {
+                shi--;
+                if (shi == 9) {
+                    bulletArray[j].imgNode.src = "img/11.gif";
+                }
+                if (shi <= 0) {
+                    divBox.removeChild(bulletArray[j].imgNode);//c超出时小飞机的图片节点移除
+                    bulletArray.splice(j, 1);//超出小飞机的数组也要删除
+                    shi = 10;
+                }
+            }
+
+        }
+    }
+
+    /**
+     * 子弹模板
+     * 属性：
+     * 1.节点img
+     * 2.路径src
+     * 3.xy
+     * 4.攻击力
+     * 5.速度
+     * 行为：
+     * 1.移动
+     * 2.初始话**/
+    function Bullet(imgsrc, x, y, speed, attack) {
+        this.imgNode = document.createElement("img");
+        this.imgsrc = imgsrc;
+        this.x = x;
+        this.y = y;
+        this.speed = speed;
+        this.attack = attack;
+        this.isDead1 = false;
+        this.move = function () {//子弹移动
+            this.imgNode.style.left = parseInt(this.imgNode.style.left) + this.speed + "px";
+        };
+        this.init = function () {
+            this.imgNode.src = this.imgsrc;
+            this.imgNode.style.position = "absolute";
+            this.imgNode.style.left = this.x = this.x + "px";
+            this.imgNode.style.top = this.y + "px";
+            divBox.appendChild(this.imgNode);
+        };
+        this.init();
+    }
+
+
+    //自己碰撞
+    function endCheck() {
+        for (var i = 0; i < enemyArray.length; i++) {//循环所有小飞机
+            var herHeight = enemyArray[i].height;//敌方飞机高度
+            var herWidth = enemyArray[i].width;//敌方飞机宽度
+            var herTop = parseInt(enemyArray[i].imgNode.style.top);//敌方飞机位置：上
+            var myTop = parseInt(PalyerPlane.planeNode.style.top);         //我方飞机位置：上
+            var herLeft = parseInt(enemyArray[i].imgNode.style.left);//敌方飞机位置:左
+            var myLeft = parseInt(PalyerPlane.planeNode.style.left);//我方飞机位置:左
+            if (upBtnStatus === false && downBtnStatus === false) {
+                if ((myTop <= herTop && myTop + 52 >= herTop) || (myTop <= herTop + herHeight && myTop + 52 >= herTop + herHeight)) {
+                    if (myLeft + 57 >= herLeft && myLeft < herLeft + herWidth) {
+                        PalyerPlane.planeNode.src = "img/si.gif";
+                    }
+                }
+            }
+
+        }
+    }
+
+    //碰撞
+    function crashCheck() {
+        for (var i = 0; i < enemyArray.length; i++) {//循环所有小飞机
+            for (var j = 0; j < bulletArray.length; j++) {//循环所有子弹数组
+                var btLeft = parseInt(bulletArray[j].imgNode.style.left);//子弹位置：左
+                var btTop = parseInt(bulletArray[j].imgNode.style.top);//子弹位置：上
+                var plLeft = parseInt(enemyArray[i].imgNode.style.left);//飞机位置：左
+                var plTop = parseInt(enemyArray[i].imgNode.style.top);//飞机位置：上
+
+                if (btLeft >= plLeft && btLeft <= plLeft +50&& btTop >= plTop && btTop <= plTop +50) {
+                    enemyArray[i].isDead = true;
+                    if (enemyArray[i].speed === 7) {
+                        enemyArray[i].imgNode.src = "img/1.gif";
+                    }
+                    if (enemyArray[i].speed === 6) {
+                        enemyArray[i].imgNode.src = "img/2.gif";
+                    }
+                    if (enemyArray[i].speed === 4) {
+                        enemyArray[i].imgNode.src = "img/3.gif";
+                    }
+                    if (enemyArray[i].speed === 2) {
+                        enemyArray[i].imgNode.src = "img/4.gif";
+                    }
+
+                    bulletArray[j].isDead1 = true;
+                }
+
+            }
+        }
+    }
+
+
+//计时
+    function time() {
+        var timeArr = ["img/00.gif"," img/1111.gif",
+        "img/2222.gif", "img/3333.gif", "img/4444.gif",
+        "img/5555.gif", "img/6666.gif", "img/7777.gif", "img/8888.gif", "img/9999.gif"];
+        var index1 = 0;
+        var index2 = 3;
+        var index3 = 1;
+        document.getElementById("box1").style.backgroundImage = "url('img/00.gif')";
+        document.getElementById("box1").style.backgroundRepeat = "no-repeat";
+        document.getElementById("box2").style.backgroundImage = "url('" + timeArr[index3] + "')";
+        document.getElementById("box2").style.backgroundRepeat = "no-repeat";
+        document.getElementById("box3").style.backgroundImage = "url('img/d.png')";
+        document.getElementById("box3").style.backgroundRepeat = "no-repeat";
+        document.getElementById("box4").style.backgroundImage = "url('" + timeArr[index2] + "')";
+        document.getElementById("box4").style.backgroundRepeat = "no-repeat";
+        document.getElementById("box5").style.backgroundImage = "url('" + timeArr[index1] + "')";
+        document.getElementById("box5").style.backgroundRepeat = "no-repeat";
+        var time = setInterval(box5, 1000);
+
+        function box5() {
+            index1--;
+            if (index1 < 0) {
+                box4();
+                index1 = 9;
+            } else if (index1 == 0 && index2 == 0 && index3 == 0) {
+                clearInterval(time);
+            }
+            document.getElementById("box5").style.backgroundImage = "url('" + timeArr[index1] + "')";
+
+        }
+
+        function box4() {
+            index2--;
+            if (index2 < 0) {
+                box2();
+                index2 = 5;
+            }
+            document.getElementById("box4").style.backgroundImage = "url('" + timeArr[index2] + "')";
+        }
+
+        function box2() {
+            index3 = 0;
+            document.getElementById("box2").style.backgroundImage = "url('" + timeArr[index3] + "')";
+        }
+    }
+
+</script>
+</body>
+</html>
